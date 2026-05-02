@@ -1,0 +1,16 @@
+{
+    "name": "New Year Countdown Premium",
+    "short_name": "NY Countdown",
+    "description": "A highly aesthetic, premium New Year Countdown application with physics and PWA support.",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "background_color": "#0f0a1d",
+    "theme_color": "#9061f9",
+    "icons": [
+        {
+            "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%239061f9'/><text x='50' y='65' font-size='50' text-anchor='middle' fill='white' font-family='sans-serif'>NY</text></svg>",
+            "sizes": "192x192",
+            "type": "image/svg+xml"
+        }
+    ]
+}

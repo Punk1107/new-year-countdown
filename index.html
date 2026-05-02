@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>New Year Countdown</title>
+    <meta name="description" content="A premium New Year Countdown with snow, fireworks, timezone support, and glassmorphism design.">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#9061f9" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#0ea5e9" media="(prefers-color-scheme: light)">
+</head>
+<body>
+    <!-- Snow / Fireworks Canvas -->
+    <canvas id="snow-canvas" aria-hidden="true"></canvas>
+
+    <!-- Background Landscape -->
+    <div class="landscape" aria-hidden="true">
+        <div class="mountain-back"></div>
+        <div class="mountain-front"></div>
+        <div class="ground"></div>
+    </div>
+
+    <!-- App Shell -->
+    <div class="app-container">
+
+        <!-- ── Header ── -->
+        <header class="top-actions">
+            <div class="left-actions">
+                <button id="effects-toggle" class="icon-btn" aria-label="Toggle snow effects" title="Snow On/Off" aria-pressed="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <line x1="12" y1="2"    x2="12" y2="6"/>
+                        <line x1="12" y1="18"   x2="12" y2="22"/>
+                        <line x1="4.93" y1="4.93"  x2="7.76" y2="7.76"/>
+                        <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/>
+                        <line x1="2"  y1="12"   x2="6"  y2="12"/>
+                        <line x1="18" y1="12"   x2="22" y2="12"/>
+                        <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/>
+                        <line x1="16.24" y1="7.76"  x2="19.07" y2="4.93"/>
+                    </svg>
+                </button>
+
+                <button id="audio-toggle" class="icon-btn" aria-label="Toggle sound" title="Sound On/Off" aria-pressed="false">
+                    <!-- Muted icon (default) -->
+                    <svg class="icon-audio-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                        <line x1="23" y1="9"  x2="17" y2="15"/>
+                        <line x1="17" y1="9"  x2="23" y2="15"/>
+                    </svg>
+                    <!-- Sound-on icon (hidden) -->
+                    <svg class="icon-audio-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Theme toggle pill -->
+            <button id="theme-toggle" class="icon-btn theme-btn" aria-label="Toggle light/dark theme" title="Toggle Theme">
+                <div class="toggle-track" aria-hidden="true">
+                    <div class="toggle-knob">
+                        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="5"/>
+                            <line x1="12" y1="1"  x2="12" y2="3"/>
+                            <line x1="12" y1="21" x2="12" y2="23"/>
+                            <line x1="4.22"  y1="4.22"  x2="5.64"  y2="5.64"/>
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                            <line x1="1"  y1="12" x2="3"  y2="12"/>
+                            <line x1="21" y1="12" x2="23" y2="12"/>
+                            <line x1="4.22"  y1="19.78" x2="5.64"  y2="18.36"/>
+                            <line x1="18.36" y1="5.64"  x2="19.78" y2="4.22"/>
+                        </svg>
+                        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                        </svg>
+                    </div>
+                </div>
+            </button>
+        </header>
+
+        <!-- ── Main ── -->
+        <main class="main-content">
+            <!-- Title block -->
+            <div class="typography-section">
+                <p class="subheading">C O U N T D O W N &nbsp;·&nbsp; T O</p>
+
+                <label for="timezone-selector" class="sr-only">Select timezone</label>
+                <select id="timezone-selector" class="timezone-selector">
+                    <option value="local">🌐 Local Time</option>
+                    <option value="America/New_York">🗽 New York</option>
+                    <option value="Europe/London">🎡 London</option>
+                    <option value="Asia/Bangkok">🏯 Bangkok</option>
+                    <option value="Asia/Tokyo">⛩️ Tokyo</option>
+                    <option value="Australia/Sydney">🦘 Sydney</option>
+                </select>
+
+                <h1 class="heading">New Year</h1>
+                <div class="year-display" id="year-display" aria-live="polite" aria-atomic="true">2027</div>
+            </div>
+
+            <!-- Countdown cards -->
+            <div class="countdown-container" role="timer" aria-label="Countdown to New Year">
+                <div class="countdown-card" id="card-days">
+                    <div class="noise-overlay" aria-hidden="true"></div>
+                    <div class="glare"         aria-hidden="true"></div>
+                    <span class="number" id="days">00</span>
+                    <span class="label">DAYS</span>
+                    <div class="progress-bar-container" role="progressbar" aria-label="Days progress" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-bar" id="progress-days"></div>
+                    </div>
+                </div>
+
+                <span class="separator" aria-hidden="true">:</span>
+
+                <div class="countdown-card" id="card-hours">
+                    <div class="noise-overlay" aria-hidden="true"></div>
+                    <div class="glare"         aria-hidden="true"></div>
+                    <span class="number" id="hours">00</span>
+                    <span class="label">HOURS</span>
+                    <div class="progress-bar-container" role="progressbar" aria-label="Hours progress" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-bar" id="progress-hours"></div>
+                    </div>
+                </div>
+
+                <span class="separator" aria-hidden="true">:</span>
+
+                <div class="countdown-card" id="card-minutes">
+                    <div class="noise-overlay" aria-hidden="true"></div>
+                    <div class="glare"         aria-hidden="true"></div>
+                    <span class="number" id="minutes">00</span>
+                    <span class="label">MINUTES</span>
+                    <div class="progress-bar-container" role="progressbar" aria-label="Minutes progress" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-bar" id="progress-minutes"></div>
+                    </div>
+                </div>
+
+                <span class="separator" aria-hidden="true">:</span>
+
+                <div class="countdown-card" id="card-seconds">
+                    <div class="noise-overlay" aria-hidden="true"></div>
+                    <div class="glare"         aria-hidden="true"></div>
+                    <span class="number" id="seconds">00</span>
+                    <span class="label">SECONDS</span>
+                    <div class="progress-bar-container" role="progressbar" aria-label="Seconds progress" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-bar" id="progress-seconds"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Celebration overlay -->
+            <div id="celebration-overlay" class="celebration-overlay" aria-live="assertive" aria-atomic="true" hidden>
+                <div class="celebration-inner">
+                    <p class="celebration-text">HAPPY NEW YEAR!</p>
+                    <p class="celebration-year" id="celebration-year"></p>
+                </div>
+            </div>
+        </main>
+
+        <!-- ── Footer ── -->
+        <footer class="footer">
+            <p id="footer-text" aria-live="polite">✨ Loading countdown…</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

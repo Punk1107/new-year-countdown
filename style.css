@@ -1,0 +1,650 @@
+/* ================================================================
+   New Year Countdown — Design System
+   Senior-level CSS: tokens, fluid type, composited animations,
+   true mobile-first, no sticky hover bugs, no layout thrash
+   ================================================================ */
+
+/* ---------- Fonts ---------- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap');
+
+/* ---------- Design Tokens ---------- */
+:root {
+    /* Typography */
+    --font-body:    'Inter', system-ui, sans-serif;
+    --font-display: 'Playfair Display', Georgia, serif;
+
+    /* Animation */
+    --dur-fast:   150ms;
+    --dur-base:   300ms;
+    --dur-slow:   500ms;
+    --dur-xslow:  1000ms;
+    --ease-out:   cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-spring:cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-in-out:cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Dark Theme (default) */
+    --clr-bg-a:   220 60% 6%;   /* hsl values for bg gradient */
+    --clr-bg-b:   270 52% 19%;
+    --clr-bg-c:   230 44% 15%;
+
+    --clr-surface:        rgba(255 255 255 / 0.055);
+    --clr-surface-hover:  rgba(255 255 255 / 0.10);
+    --clr-border:         rgba(255 255 255 / 0.10);
+    --clr-border-focus:   rgba(168 127 251 / 0.8);
+
+    --clr-text-primary:   hsl(0 0% 100%);
+    --clr-text-secondary: hsl(250 20% 72%);
+
+    --clr-accent:         hsl(267 92% 65%);   /* #a87ffb */
+    --clr-accent-2:       hsl(267 90% 80%);   /* #c19cfc */
+    --clr-year:           hsl(267 80% 87%);   /* #d1bbf9 */
+    --clr-glow:           hsl(267 85% 67% / 55%);
+
+    --clr-progress-a:     hsl(267 92% 65%);
+    --clr-progress-b:     hsl(267 90% 80%);
+
+    --shadow-card: 0 8px 32px hsl(0 0% 0% / 35%);
+    --shadow-card-hover: 0 20px 50px hsl(0 0% 0% / 50%);
+
+    --mountain-back:  hsl(237 26% 15%);
+    --mountain-front: hsl(240 24% 18%);
+    --ground-top:     hsl(200 20% 14%);
+    --ground-bottom:  hsl(208 26% 9%);
+}
+
+[data-theme="light"] {
+    --clr-bg-a:   200 100% 94%;
+    --clr-bg-b:   200 95% 85%;
+    --clr-bg-c:   200 85% 72%;
+
+    --clr-surface:        rgba(255 255 255 / 0.50);
+    --clr-surface-hover:  rgba(255 255 255 / 0.70);
+    --clr-border:         rgba(255 255 255 / 0.65);
+    --clr-border-focus:   rgba(3 105 161 / 0.7);
+
+    --clr-text-primary:   hsl(215 28% 8%);
+    --clr-text-secondary: hsl(215 15% 35%);
+
+    --clr-accent:         hsl(200 90% 35%);
+    --clr-accent-2:       hsl(200 80% 47%);
+    --clr-year:           hsl(200 90% 30%);
+    --clr-glow:           hsl(200 85% 45% / 40%);
+
+    --clr-progress-a:     hsl(200 90% 44%);
+    --clr-progress-b:     hsl(198 80% 57%);
+
+    --shadow-card: 0 8px 32px hsl(215 40% 20% / 12%);
+    --shadow-card-hover: 0 20px 50px hsl(200 80% 35% / 20%);
+
+    --mountain-back:  hsl(215 16% 60%);
+    --mountain-front: hsl(215 14% 80%);
+    --ground-top:     hsl(142 60% 73%);
+    --ground-bottom:  hsl(142 56% 55%);
+}
+
+/* ---------- Screen-reader only ---------- */
+.sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ---------- Reset ---------- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+    font-family: var(--font-body);
+    background: linear-gradient(
+        135deg,
+        hsl(var(--clr-bg-a)) 0%,
+        hsl(var(--clr-bg-b)) 50%,
+        hsl(var(--clr-bg-c)) 100%
+    );
+    color: var(--clr-text-primary);
+    min-height: 100svh;         /* svh = safer than vh on mobile */
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+
+    /* Smooth theme transition — only specific props, never "all" */
+    transition:
+        background var(--dur-slow) var(--ease-in-out),
+        color       var(--dur-slow) var(--ease-in-out);
+}
+
+/* ---------- Canvas ---------- */
+#snow-canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 1;
+    /* Use transform compositing layer, not 'contents' (invalid value) */
+    will-change: transform;
+}
+
+/* ---------- Landscape ---------- */
+.landscape {
+    position: fixed;
+    bottom: 0; left: 0;
+    width: 100%; height: 38vh;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.mountain-back,
+.mountain-front,
+.ground {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    /* Only transition color, not geometry */
+    transition: background var(--dur-slow) var(--ease-in-out),
+                background-color var(--dur-slow) var(--ease-in-out);
+}
+
+.mountain-back {
+    height: 60%;
+    background: var(--mountain-back);
+    clip-path: polygon(0% 100%, 0% 50%, 20% 10%, 40% 60%, 60% 30%, 80% 50%, 100% 20%, 100% 100%);
+}
+.mountain-front {
+    height: 40%;
+    background: var(--mountain-front);
+    clip-path: polygon(0% 100%, 0% 40%, 15% 60%, 35% 20%, 55% 50%, 75% 10%, 100% 40%, 100% 100%);
+}
+.ground {
+    height: 14%;
+    background: linear-gradient(to bottom, var(--ground-top), var(--ground-bottom));
+}
+
+/* ---------- App Shell ---------- */
+.app-container {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    height: 100svh;
+    padding: clamp(1rem, 3vw, 1.75rem) clamp(1rem, 4vw, 2.5rem);
+}
+
+/* ---------- Header ---------- */
+.top-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+.left-actions { display: flex; gap: 0.625rem; }
+
+/* ---------- Buttons ---------- */
+.icon-btn {
+    --_bg: var(--clr-surface);
+    background: var(--_bg);
+    border: 1px solid var(--clr-border);
+    border-radius: 14px;
+    width: 48px; height: 48px;
+    display: grid; place-items: center;
+    cursor: pointer;
+    color: var(--clr-text-primary);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    flex-shrink: 0;
+    position: relative;
+    /* Composite-only transitions: opacity + transform (no layout) */
+    transition:
+        transform   var(--dur-fast) var(--ease-spring),
+        opacity     var(--dur-base) var(--ease-in-out),
+        border-color var(--dur-base) var(--ease-in-out),
+        background  var(--dur-base) var(--ease-in-out),
+        color       var(--dur-base) var(--ease-in-out);
+}
+.icon-btn svg {
+    width: 19px; height: 19px;
+    flex-shrink: 0;
+    /* pointer events on svg children can cause ghost clicks */
+    pointer-events: none;
+}
+
+/* Desktop hover only — never sticky on touch */
+@media (hover: hover) and (pointer: fine) {
+    .icon-btn:hover {
+        --_bg: var(--clr-surface-hover);
+        transform: scale(1.08);
+    }
+}
+.icon-btn:active { transform: scale(0.95); }
+
+/* State modifiers */
+.icon-btn[aria-pressed="false"] { opacity: 0.45; }
+.icon-btn.is-active {
+    color: var(--clr-accent);
+    border-color: var(--clr-border-focus);
+}
+
+/* Audio icon swap — CSS-only, no JS display toggle needed */
+.icon-btn[aria-pressed="false"] .icon-audio-on  { display: none; }
+.icon-btn[aria-pressed="false"] .icon-audio-off { display: block; }
+.icon-btn[aria-pressed="true"]  .icon-audio-off { display: none; }
+.icon-btn[aria-pressed="true"]  .icon-audio-on  { display: block; }
+
+/* ── Theme Toggle Pill ───────────────────────────────────────── */
+.theme-btn {
+    /* Override generic icon-btn sizing */
+    width: 68px;
+    height: 36px;
+    border-radius: 18px;
+    padding: 0;
+    overflow: hidden;
+    background: transparent;
+    border: none;
+    /* Dark track: deep purple with inner shadow */
+    background: hsl(267 50% 14%);
+    box-shadow:
+        inset 0 1px 4px hsl(0 0% 0% / 50%),
+        inset 0 0 0 1px hsl(267 60% 30% / 40%),
+        0 0 12px hsl(267 80% 50% / 25%);
+    transition:
+        background        var(--dur-base) var(--ease-in-out),
+        box-shadow        var(--dur-base) var(--ease-in-out),
+        transform         var(--dur-fast) var(--ease-spring);
+}
+[data-theme="light"] .theme-btn {
+    background: hsl(200 60% 82%);
+    box-shadow:
+        inset 0 1px 4px hsl(200 40% 50% / 30%),
+        inset 0 0 0 1px hsl(200 60% 60% / 40%),
+        0 0 12px hsl(200 80% 60% / 20%);
+}
+
+.toggle-track {
+    width: 100%; height: 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 0 4px;
+}
+
+.toggle-knob {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    position: absolute;
+    left: 4px;
+    display: grid;
+    place-items: center;
+    /* Crisp white knob with depth */
+    background: linear-gradient(145deg, #ffffff, #e8e8f0);
+    box-shadow:
+        0 1px 3px hsl(0 0% 0% / 40%),
+        0 4px 12px hsl(0 0% 0% / 30%),
+        inset 0 1px 0 hsl(0 0% 100% / 80%);
+    will-change: transform;
+    transform: translateX(0);
+    transition: transform 0.35s cubic-bezier(0.68, -0.55, 0.265, 1.55),
+                box-shadow var(--dur-base) var(--ease-in-out);
+}
+[data-theme="light"] .toggle-knob {
+    transform: translateX(32px); /* 68px pill − 28px knob − 2×4px padding */
+    background: linear-gradient(145deg, #fffde7, #fef9c3);
+    box-shadow:
+        0 1px 3px hsl(40 80% 40% / 30%),
+        0 4px 12px hsl(40 80% 50% / 20%),
+        inset 0 1px 0 hsl(60 100% 100% / 90%);
+}
+
+/* ── Toggle Icons ─────────────────────────────────────────────── */
+.icon-sun,
+.icon-moon {
+    width: 15px !important;
+    height: 15px !important;
+    position: absolute;
+    pointer-events: none;
+    transition:
+        opacity   0.25s var(--ease-in-out),
+        transform 0.35s var(--ease-spring);
+}
+/* Dark → moon visible */
+[data-theme="dark"]  .icon-moon {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+    color: hsl(250 60% 75%);
+}
+[data-theme="dark"]  .icon-sun {
+    opacity: 0;
+    transform: rotate(180deg) scale(0.3);
+}
+/* Light → sun visible */
+[data-theme="light"] .icon-sun {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+    color: hsl(38 95% 50%);
+}
+[data-theme="light"] .icon-moon {
+    opacity: 0;
+    transform: rotate(-180deg) scale(0.3);
+}
+
+/* ---------- Main Content ---------- */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    gap: 0;
+    /* min-height = 0 prevents flex overflow on small screens */
+    min-height: 0;
+}
+
+/* ---------- Typography ---------- */
+.typography-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    margin-bottom: clamp(1.5rem, 4vw, 3rem);
+}
+
+.subheading {
+    font-size: clamp(0.65rem, 1.8vw, 1rem);
+    letter-spacing: clamp(0.25rem, 1.2vw, 0.55rem);
+    font-weight: 500;
+    color: var(--clr-text-secondary);
+    margin-bottom: 0.4rem;
+}
+
+/* Timezone selector */
+.timezone-selector {
+    appearance: none;
+    -webkit-appearance: none;
+    background: var(--clr-surface);
+    color: var(--clr-text-primary);
+    border: 1px solid var(--clr-border);
+    border-radius: 10px;
+    padding: 0.3rem 0.75rem;
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    outline: none;
+    cursor: pointer;
+    transition: border-color var(--dur-base), background var(--dur-base);
+    /* center-align on Safari */
+    text-align: center;
+    text-align-last: center;
+    margin-bottom: 0.6rem;
+}
+.timezone-selector:focus-visible { border-color: var(--clr-border-focus); }
+.timezone-selector option { background: #1a1235; color: #fff; }
+[data-theme="light"] .timezone-selector option { background: #dbeafe; color: #0f172a; }
+
+.heading {
+    font-family: var(--font-display);
+    font-size: clamp(2.2rem, 5.5vw, 4rem);
+    font-weight: 700;
+    color: var(--clr-accent);
+    text-shadow: 0 0 28px var(--clr-glow);
+    line-height: 1.05;
+    margin-bottom: 0.2rem;
+}
+
+.year-display {
+    font-family: var(--font-display);
+    font-size: clamp(3.8rem, 11vw, 8rem);
+    font-weight: 700;
+    line-height: 1;
+    color: var(--clr-year);
+    text-shadow: 0 0 50px var(--clr-glow);
+    letter-spacing: 0.06em;
+    /* GPU text rendering */
+    will-change: transform;
+    transition: transform var(--dur-slow) var(--ease-spring),
+                color     var(--dur-slow);
+}
+/* Year number flip animation */
+.year-display.flip {
+    animation: yearFlip var(--dur-slow) var(--ease-spring);
+}
+@keyframes yearFlip {
+    0%   { transform: translateY(-12px) scale(1.05); opacity: 0.5; }
+    100% { transform: translateY(0)     scale(1);    opacity: 1; }
+}
+
+/* ---------- Countdown Cards ---------- */
+.countdown-container {
+    display: flex;
+    align-items: center;
+    gap: clamp(0.4rem, 2vw, 1.2rem);
+    /* prevent overflow on tiny screens */
+    flex-wrap: nowrap;
+}
+
+.separator {
+    font-size: clamp(1.2rem, 3vw, 2rem);
+    font-weight: 700;
+    color: var(--clr-text-secondary);
+    /* Use transform + opacity for composited animation */
+    animation: blink 2s var(--ease-in-out) infinite;
+    will-change: opacity;
+    flex-shrink: 0;
+    user-select: none;
+}
+@keyframes blink {
+    0%, 100% { opacity: 1;    }
+    50%       { opacity: 0.2; }
+}
+
+.countdown-card {
+    position: relative;
+    overflow: hidden;
+    background: var(--clr-surface);
+    border: 1px solid var(--clr-border);
+    box-shadow: var(--shadow-card);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: clamp(14px, 2vw, 22px);
+    padding: clamp(0.9rem, 2.5vw, 1.6rem) clamp(0.9rem, 3.5vw, 2rem);
+    min-width: clamp(82px, 13vw, 128px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    /* Composite-layer transitions only */
+    transition:
+        transform    var(--dur-base) var(--ease-spring),
+        box-shadow   var(--dur-base) var(--ease-in-out),
+        border-color var(--dur-base) var(--ease-in-out),
+        background   var(--dur-slow) var(--ease-in-out);
+    will-change: transform;
+}
+
+/* Glass noise texture — subtle & hardware-friendly */
+.noise-overlay {
+    position: absolute;
+    inset: 0;
+    /* Inline SVG noise (no network request, no flicker) */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    opacity: 0.045;
+    pointer-events: none;
+    z-index: 0;
+}
+[data-theme="light"] .noise-overlay { opacity: 0.07; }
+
+/* Glare — pure composited layer (no layout) */
+.glare {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255 255 255 / 0.18), transparent 70%);
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0;
+    /* transform-only — GPU friendly */
+    transition: opacity var(--dur-base) var(--ease-in-out);
+}
+
+/* Raise card content above decorative layers */
+.countdown-card .number,
+.countdown-card .label,
+.countdown-card .progress-bar-container {
+    position: relative;
+    z-index: 2;
+}
+
+/* Hover — strict desktop guard */
+@media (hover: hover) and (pointer: fine) {
+    .countdown-card:hover {
+        transform: translateY(-7px) scale(1.02);
+        box-shadow: var(--shadow-card-hover);
+        border-color: var(--clr-border-focus);
+    }
+    .countdown-card:hover .glare { opacity: 1; }
+}
+.countdown-card:active { transform: scale(0.98); }
+
+/* Number display */
+.number {
+    font-size: clamp(2rem, 5.5vw, 3.5rem);
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 0.35rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+    /* Smooth digit flip */
+    transition: transform var(--dur-fast) var(--ease-spring);
+}
+/* Digit-changed pulse */
+.number.changed {
+    animation: numPulse var(--dur-base) var(--ease-out);
+}
+@keyframes numPulse {
+    0%   { transform: scale(1.12); }
+    100% { transform: scale(1); }
+}
+
+.label {
+    font-size: clamp(0.55rem, 1.1vw, 0.72rem);
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    color: var(--clr-text-secondary);
+    margin-bottom: 0.8rem;
+    text-transform: uppercase;
+}
+
+/* Progress bar */
+.progress-bar-container {
+    width: 100%;
+    height: 3px;
+    background: rgba(255 255 255 / 0.12);
+    border-radius: 2px;
+    overflow: hidden;
+}
+[data-theme="light"] .progress-bar-container { background: rgba(0 0 0 / 0.08); }
+
+.progress-bar {
+    height: 100%;
+    width: 0%;                          /* ← start at 0, JS sets correct value */
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--clr-progress-a), var(--clr-progress-b));
+    transform-origin: left center;
+    /* Smooth eased transitions — no jarring jumps */
+    transition: width 0.9s var(--ease-in-out);
+    will-change: width;
+}
+
+/* ---------- Celebration Overlay ---------- */
+.celebration-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+    /* Use opacity for GPU fade */
+    opacity: 0;
+    transition: opacity var(--dur-xslow) var(--ease-in-out);
+}
+/* When shown via JS: element is un-hidden then class added */
+.celebration-overlay.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.celebration-inner {
+    text-align: center;
+    animation: celebBounce var(--dur-xslow) var(--ease-spring) both;
+}
+@keyframes celebBounce {
+    0%   { transform: scale(0.3) translateY(40px); opacity: 0; }
+    60%  { transform: scale(1.06); opacity: 1; }
+    100% { transform: scale(1) translateY(0); }
+}
+
+.celebration-text {
+    font-family: var(--font-display);
+    font-size: clamp(2.8rem, 8.5vw, 7rem);
+    font-weight: 700;
+    line-height: 1.05;
+    background: linear-gradient(135deg, var(--clr-progress-a), var(--clr-progress-b));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+.celebration-year {
+    font-family: var(--font-display);
+    font-size: clamp(1.8rem, 5vw, 4rem);
+    font-weight: 700;
+    color: var(--clr-text-primary);
+    margin-top: 0.4rem;
+    animation: fadeSlideUp 1.2s var(--ease-out) 0.3s both;
+}
+@keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Footer ---------- */
+.footer {
+    flex-shrink: 0;
+    text-align: center;
+    padding: 0.6rem 1rem;
+    font-size: clamp(0.7rem, 1.4vw, 0.85rem);
+    font-weight: 500;
+    color: var(--clr-text-secondary);
+    transition: opacity var(--dur-base);
+    /* clip text that's too long on tiny screens */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ---------- Mobile ---------- */
+@media (max-width: 600px) {
+    .countdown-container {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.4rem;
+    }
+    .separator { display: none; }
+    /* Stack the two left buttons vertically to save header width */
+    .left-actions { gap: 0.5rem; }
+}
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 1ms !important;
+        transition-duration: 1ms !important;
+    }
+    .separator { animation: none; opacity: 0.6; }
+}
