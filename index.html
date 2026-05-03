@@ -9,6 +9,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" as="style">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
@@ -32,7 +33,7 @@
         <!-- ── Header ── -->
         <header class="top-actions">
             <div class="left-actions">
-                <button id="effects-toggle" class="icon-btn" aria-label="Toggle snow effects" title="Snow On/Off" aria-pressed="true">
+                <button id="effects-toggle" class="icon-btn" aria-label="Toggle snow effects" data-tooltip="Snow On/Off" aria-pressed="true">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <line x1="12" y1="2"    x2="12" y2="6"/>
                         <line x1="12" y1="18"   x2="12" y2="22"/>
@@ -45,7 +46,7 @@
                     </svg>
                 </button>
 
-                <button id="audio-toggle" class="icon-btn" aria-label="Toggle sound" title="Sound On/Off" aria-pressed="false">
+                <button id="audio-toggle" class="icon-btn" aria-label="Toggle sound" data-tooltip="Sound On/Off" aria-pressed="false">
                     <!-- Muted icon (default) -->
                     <svg class="icon-audio-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
@@ -61,7 +62,7 @@
             </div>
 
             <!-- Theme toggle pill -->
-            <button id="theme-toggle" class="icon-btn theme-btn" aria-label="Toggle light/dark theme" title="Toggle Theme">
+            <button id="theme-toggle" class="icon-btn theme-btn" aria-label="Toggle light/dark theme" data-tooltip="Toggle Theme">
                 <div class="toggle-track" aria-hidden="true">
                     <div class="toggle-knob">
                         <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -86,7 +87,7 @@
         <!-- ── Main ── -->
         <main class="main-content">
             <!-- Title block -->
-            <div class="typography-section">
+            <div class="typography-section stagger-in" style="--stagger: 1">
                 <p class="subheading">C O U N T D O W N &nbsp;·&nbsp; T O</p>
 
                 <label for="timezone-selector" class="sr-only">Select timezone</label>
@@ -104,7 +105,7 @@
             </div>
 
             <!-- Countdown cards -->
-            <div class="countdown-container" role="timer" aria-label="Countdown to New Year">
+            <div class="countdown-container stagger-in" style="--stagger: 2" role="timer" aria-label="Countdown to New Year">
                 <div class="countdown-card" id="card-days">
                     <div class="noise-overlay" aria-hidden="true"></div>
                     <div class="glare"         aria-hidden="true"></div>
@@ -162,7 +163,7 @@
         </main>
 
         <!-- ── Footer ── -->
-        <footer class="footer">
+        <footer class="footer stagger-in" style="--stagger: 3">
             <p id="footer-text" aria-live="polite">✨ Loading countdown…</p>
         </footer>
     </div>

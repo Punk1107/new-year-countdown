@@ -220,6 +220,42 @@ body {
 }
 .icon-btn:active { transform: scale(0.95); }
 
+/* Focus Accessibility */
+.icon-btn:focus-visible {
+    outline: 2px solid var(--clr-border-focus);
+    outline-offset: 4px;
+}
+
+/* Custom Tooltips (Glassmorphism) */
+.icon-btn[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    top: calc(100% + 12px);
+    left: 50%;
+    transform: translateX(-50%) translateY(5px);
+    background: var(--clr-surface);
+    color: var(--clr-text-primary);
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    border: 1px solid var(--clr-border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: var(--shadow-card);
+    transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+    z-index: 100;
+}
+@media (hover: hover) and (pointer: fine) {
+    .icon-btn[data-tooltip]:hover::after {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
 /* State modifiers */
 .icon-btn[aria-pressed="false"] { opacity: 0.45; }
 .icon-btn.is-active {
@@ -530,6 +566,16 @@ body {
     100% { transform: scale(1); }
 }
 
+/* Tension pulse for last 10 seconds */
+.countdown-card.pulse-fast {
+    animation: pulseFast 0.8s ease-in-out infinite alternate;
+    border-color: var(--clr-accent);
+}
+@keyframes pulseFast {
+    0%   { box-shadow: 0 0 10px var(--clr-glow); transform: scale(1); }
+    100% { box-shadow: 0 0 30px var(--clr-glow); transform: scale(1.03); }
+}
+
 .label {
     font-size: clamp(0.55rem, 1.1vw, 0.72rem);
     font-weight: 600;
@@ -639,6 +685,15 @@ body {
     /* Stack the two left buttons vertically to save header width */
     .left-actions { gap: 0.5rem; }
 }
+
+/* ---------- Entrance Animations ---------- */
+.stagger-in {
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeSlideUp 0.8s var(--ease-out) forwards;
+    animation-delay: calc(var(--stagger, 1) * 150ms);
+}
+
 
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
