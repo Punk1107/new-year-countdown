@@ -92,7 +92,7 @@
     celebYearEl: $('celebration-year'),
   };
 
-  const ctx = el.canvas.getContext('2d', { alpha: true });
+  const ctx = null; // Initialize conditionally later
 
   /* ── App State ─────────────────────────────────────────────── */
   const state = {
@@ -114,32 +114,64 @@
   // DOM diff cache — avoid unnecessary textContent writes
   const prev = { d: -1, h: -1, m: -1, s: -1 };
 
+  /* ── Particle System (Worker or Fallback) ──────────────────── */
+  let useWorker = false;
+  let worker = null;
+  let canvasPaused = false;
+  
+  // Fallback variables
+  let particles    = [];
+  let lastFrameTs  = 0;
+  let rafId        = 0;
+
+  if ('OffscreenCanvas' in window && 'transferControlToOffscreen' in el.canvas) {
+    try {
+      worker = new Worker('./worker.js');
+      const offscreen = el.canvas.transferControlToOffscreen();
+      worker.postMessage({ 
+        type: 'INIT', 
+        payload: { canvas: offscreen, width: window.innerWidth, height: window.innerHeight } 
+      }, [offscreen]);
+      useWorker = true;
+    } catch (e) {
+      console.warn('OffscreenCanvas fallback:', e);
+    }
+  }
+
+  // ctx is used globally in fallback mode
+  let fallbackCtx = null;
+  if (!useWorker) {
+    fallbackCtx = el.canvas.getContext('2d', { alpha: true });
+    el.canvas.width = window.innerWidth;
+    el.canvas.height = window.innerHeight;
+  }
+
   /* ── Canvas Resize (debounced, preserves particle positions) ── */
   let resizeTimer = 0;
   function onResize() {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
-      const scaleX = window.innerWidth  / (el.canvas.width  || 1);
-      const scaleY = window.innerHeight / (el.canvas.height || 1);
-      el.canvas.width  = window.innerWidth;
-      el.canvas.height = window.innerHeight;
-      // Rescale existing particle positions so they don't teleport
-      for (const p of particles) {
-        p.x *= scaleX;
-        p.y *= scaleY;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      
+      if (useWorker) {
+        worker.postMessage({ type: 'RESIZE', payload: { width: w, height: h }});
+      } else {
+        const scaleX = w / (el.canvas.width  || 1);
+        const scaleY = h / (el.canvas.height || 1);
+        el.canvas.width  = w;
+        el.canvas.height = h;
+        // Rescale existing particle positions so they don't teleport
+        for (const p of particles) {
+          p.x *= scaleX;
+          p.y *= scaleY;
+        }
       }
     }, 150);
   }
   window.addEventListener('resize', onResize, { passive: true });
-  el.canvas.width  = window.innerWidth;
-  el.canvas.height = window.innerHeight;
 
-  /* ── Particle System ───────────────────────────────────────── */
-  let particles    = [];
-  let lastFrameTs  = 0;
-  let rafId        = 0;
-  let canvasPaused = false;
-
+  /* ── Fallback Classes (Used only if !useWorker) ───────────── */
   class Snow {
     constructor(scatter) {
       this.reset();
@@ -150,8 +182,8 @@
       this.x     = Math.random() * w;
       this.y     = -(Math.random() * 20 + 5);
       this.r     = Math.random() * 2.2 + 0.8;
-      this.vx    = (Math.random() - 0.5) * 35;   // px/s
-      this.vy    = Math.random() * 70 + 35;       // px/s
+      this.vx    = (Math.random() - 0.5) * 35;
+      this.vy    = Math.random() * 70 + 35;
       this.alpha = Math.random() * 0.4 + 0.22;
     }
     update(dt) {
@@ -163,10 +195,11 @@
       if (this.x > w + 10) this.x = -10;
     }
     draw() {
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, this.r, 0, PI2);
-      ctx.fillStyle = `rgba(255,255,255,${this.alpha})`;
-      ctx.fill();
+      if (!fallbackCtx) return;
+      fallbackCtx.beginPath();
+      fallbackCtx.arc(this.x, this.y, this.r, 0, PI2);
+      fallbackCtx.fillStyle = `rgba(255,255,255,${this.alpha})`;
+      fallbackCtx.fill();
     }
   }
 
@@ -174,7 +207,6 @@
     constructor() { this.respawn(); }
     respawn() {
       const w = el.canvas.width, h = el.canvas.height;
-      // Launch from a random horizontal position at the bottom
       this.x       = (0.2 + Math.random() * 0.6) * w;
       this.y       = h;
       this.vx      = (Math.random() - 0.5) * 500;
@@ -185,37 +217,41 @@
       this.hue     = Math.random() * 360;
     }
     update(dt) {
-      this.vy += 260 * dt;   // gravity
-      this.vx *= Math.pow(0.98, dt * 60); // drag (frame-rate independent)
+      this.vy += 260 * dt;
+      this.vx *= Math.pow(0.98, dt * 60);
       this.x  += this.vx * dt;
       this.y  += this.vy * dt;
       this.life -= dt;
       if (this.life <= 0 || this.y > el.canvas.height + 20) this.respawn();
     }
     draw() {
+      if (!fallbackCtx) return;
       const alpha = Math.max(0, this.life / this.maxLife);
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, this.r, 0, PI2);
-      ctx.fillStyle = `hsla(${this.hue},100%,65%,${alpha})`;
-      ctx.fill();
+      fallbackCtx.beginPath();
+      fallbackCtx.arc(this.x, this.y, this.r, 0, PI2);
+      fallbackCtx.fillStyle = `hsla(${this.hue},100%,65%,${alpha})`;
+      fallbackCtx.fill();
     }
   }
 
   function buildSnow() {
-    particles = Array.from({ length: NUM_SNOW }, (_, i) => new Snow(i < NUM_SNOW * 0.8));
+    if (!useWorker) particles = Array.from({ length: NUM_SNOW }, (_, i) => new Snow(i < NUM_SNOW * 0.8));
   }
   function buildFireworks() {
-    particles = Array.from({ length: NUM_FIREWORKS }, () => new Firework());
+    if (!useWorker) particles = Array.from({ length: NUM_FIREWORKS }, () => new Firework());
   }
-  buildSnow();
 
-  /* ── Canvas render loop ────────────────────────────────────── */
+  if (!useWorker) {
+    buildSnow();
+    rafId = requestAnimationFrame(renderLoop);
+  }
+
   function renderLoop(ts) {
-    // Cap dt to 100ms to handle tab-switch catch-up
+    if (useWorker) return;
     const dt = Math.min((ts - (lastFrameTs || ts)) / 1000, 0.1);
     lastFrameTs = ts;
 
-    ctx.clearRect(0, 0, el.canvas.width, el.canvas.height);
+    if (fallbackCtx) fallbackCtx.clearRect(0, 0, el.canvas.width, el.canvas.height);
 
     if (state.snowOn && !canvasPaused) {
       for (const p of particles) { p.update(dt); p.draw(); }
@@ -228,8 +264,10 @@
   /* Pause when tab is hidden (saves CPU/battery) */
   document.addEventListener('visibilitychange', () => {
     canvasPaused = document.hidden;
-    if (!document.hidden) {
-      lastFrameTs = 0; // reset so dt doesn't spike on return
+    if (useWorker) {
+      worker.postMessage({ type: canvasPaused ? 'PAUSE' : 'RESUME' });
+    } else {
+      if (!document.hidden) lastFrameTs = 0;
     }
   });
 
@@ -280,7 +318,12 @@
     state.celebrating = true;
 
     playChime();
-    buildFireworks();
+    
+    if (useWorker) {
+      worker.postMessage({ type: 'CELEBRATE', payload: true });
+    } else {
+      buildFireworks();
+    }
 
     // Use hidden + class for a11y (hidden attr = truly hidden from AT until visible)
     el.celebYearEl.textContent = state.targetYear;
@@ -310,7 +353,11 @@
         // Reset cache so tick re-renders immediately
         prev.d = prev.h = prev.m = prev.s = -1;
 
-        buildSnow();
+        if (useWorker) {
+          worker.postMessage({ type: 'CELEBRATE', payload: false });
+        } else {
+          buildSnow();
+        }
       }, 1100); // match CSS transition duration
     }, CELEBRATE_MS);
   }
@@ -355,6 +402,11 @@
             el.pgSeconds.style.width = pct(s, 60);
             playTick();
             updateFooter(d, h, m);
+            if (dist <= 10000) {
+              el.seconds.closest('.countdown-card').classList.add('pulse-fast');
+            } else {
+              el.seconds.closest('.countdown-card').classList.remove('pulse-fast');
+            }
           }
           if (prev.m !== m) {
             prev.m = m;
@@ -415,8 +467,12 @@
   el.snowBtn.addEventListener('click', () => {
     state.snowOn = !state.snowOn;
     el.snowBtn.setAttribute('aria-pressed', String(state.snowOn));
-    if (!state.snowOn) {
-      ctx.clearRect(0, 0, el.canvas.width, el.canvas.height);
+    if (useWorker) {
+      worker.postMessage({ type: 'TOGGLE_SNOW', payload: state.snowOn });
+    } else {
+      if (!state.snowOn && fallbackCtx) {
+        fallbackCtx.clearRect(0, 0, el.canvas.width, el.canvas.height);
+      }
     }
   });
 
@@ -485,6 +541,15 @@
       navigator.serviceWorker.register('./sw.js').catch(() => {});
     });
   }
+
+  // Global audio init (for strict browsers like iOS Safari)
+  const initAudioOnce = () => {
+    ensureAudioCtx();
+    document.removeEventListener('click', initAudioOnce);
+    document.removeEventListener('touchstart', initAudioOnce);
+  };
+  document.addEventListener('click', initAudioOnce, { once: true });
+  document.addEventListener('touchstart', initAudioOnce, { once: true });
 
   // Kick off
   scheduleNextTick();
