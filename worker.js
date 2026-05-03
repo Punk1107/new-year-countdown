@@ -25,17 +25,21 @@ class Snow {
   reset() {
     this.x     = Math.random() * width;
     this.y     = -(Math.random() * 20 + 5);
-    this.r     = Math.random() * 2.2 + 0.8;
-    this.vx    = (Math.random() - 0.5) * 35;   // px/s
-    this.vy    = Math.random() * 70 + 35;       // px/s
-    this.alpha = Math.random() * 0.4 + 0.22;
+    this.r     = Math.random() * 2.5 + 0.5;
+    // Wind drift: subtle horizontal oscillation
+    this.vx    = (Math.random() - 0.5) * 45;
+    this.vy    = Math.random() * 80 + 40;
+    this.alpha = Math.random() * 0.5 + 0.1;
+    this.windPhase = Math.random() * PI2;
   }
   update(dt) {
-    this.x += this.vx * dt;
+    // Add sinusoidal wind sway
+    const sway = Math.sin(Date.now() / 1000 + this.windPhase) * 15;
+    this.x += (this.vx + sway) * dt;
     this.y += this.vy * dt;
     if (this.y > height + 10) this.reset();
-    if (this.x < -10)    this.x = width + 10;
-    if (this.x > width + 10) this.x = -10;
+    if (this.x < -20)    this.x = width + 20;
+    if (this.x > width + 20) this.x = -20;
   }
   draw() {
     ctx.beginPath();
@@ -69,8 +73,12 @@ class Firework {
     const alpha = Math.max(0, this.life / this.maxLife);
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.r, 0, PI2);
+    // Add glowing bloom effect using shadowBlur
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = `hsla(${this.hue},100%,65%,${alpha})`;
     ctx.fillStyle = `hsla(${this.hue},100%,65%,${alpha})`;
     ctx.fill();
+    ctx.shadowBlur = 0; // reset for performance
   }
 }
 
