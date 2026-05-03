@@ -15,6 +15,25 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#9061f9" media="(prefers-color-scheme: dark)">
     <meta name="theme-color" content="#0ea5e9" media="(prefers-color-scheme: light)">
+
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="New Year Countdown — Premium Experience">
+    <meta property="og:description" content="Witness the transition to the next year with a buttery-smooth, high-performance countdown. Featuring timezone support, snow, and fireworks.">
+    <meta property="og:image" content="https://example.com/og-image.png">
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "New Year Countdown",
+      "description": "High-performance countdown to the New Year with timezone support.",
+      "applicationCategory": "Utility",
+      "operatingSystem": "All",
+      "browserRequirements": "Requires JavaScript and OffscreenCanvas support for best performance."
+    }
+    </script>
 </head>
 <body>
     <!-- Snow / Fireworks Canvas -->
@@ -169,5 +188,10 @@
     </div>
 
     <script src="script.js"></script>
+    <noscript>
+        <div style="position: fixed; inset: 0; background: #000; color: #fff; display: flex; align-items: center; justify-content: center; text-align: center; z-index: 9999;">
+            <p>Please enable JavaScript to view the New Year Countdown.</p>
+        </div>
+    </noscript>
 </body>
 </html>

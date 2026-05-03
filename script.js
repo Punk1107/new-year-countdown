@@ -34,37 +34,36 @@
 
   /** True midnight UTC offset for a given IANA timezone on Jan 1 of a year */
   function newYearTimestamp(year, tz) {
-    if (tz === 'local') {
-      // new Date(year, 0, 1) is local midnight — always correct
-      return new Date(year, 0, 1, 0, 0, 0, 0).getTime();
-    }
-    // Use Intl to find the UTC instant that corresponds to
-    // 00:00:00 on Jan 1 <year> in the target timezone.
-    // We binary-search the 48h window around UTC midnight.
+    if (tz === 'local') return new Date(year, 0, 1, 0, 0, 0, 0).getTime();
+    
+    // Performance optimization: Check if we can use a simpler cached offset
+    // but for Jan 1 <year>, DST transitions make this binary search the safest bet.
     const utcMidnight = Date.UTC(year, 0, 1);
     const fmt = new Intl.DateTimeFormat('en-US', {
-      timeZone: tz,
-      hour: 'numeric', minute: 'numeric', second: 'numeric',
-      hour12: false,
+      timeZone: tz, hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false,
     });
-    // Walk from UTC midnight -14h to +14h in 1-second steps (coarse→fine)
-    // This is cached once and never runs in a hot loop.
+
     let lo = utcMidnight - 14 * MS_HOUR;
     let hi = utcMidnight + 14 * MS_HOUR;
-    while (hi - lo > 1000) {
+    
+    // Binary search for the first millisecond of the year in the target timezone
+    while (hi - lo > 1) {
       const mid = Math.floor((lo + hi) / 2);
       const parts = fmt.formatToParts(new Date(mid));
       const h = +parts.find(p => p.type === 'hour').value;
       const m = +parts.find(p => p.type === 'minute').value;
       const s = +parts.find(p => p.type === 'second').value;
-      const totalSec = h * 3600 + m * 60 + s;
-      if (totalSec < 43200) { // before noon → past midnight, too far
+      
+      // If we are past 00:00:00 (h,m,s all 0) or on Jan 1
+      if (h === 0 && m === 0 && s === 0) {
+        hi = mid; // We found a candidate, keep searching for the earliest ms
+      } else if (h < 12) {
         hi = mid;
       } else {
         lo = mid;
       }
     }
-    return hi; // first millisecond at or after midnight in that tz
+    return hi;
   }
 
   /* ── DOM refs ──────────────────────────────────────────────── */
@@ -399,7 +398,7 @@
           if (prev.s !== s) {
             prev.s = s;
             setNumber(el.seconds, s);
-            el.pgSeconds.style.width = pct(s, 60);
+            setProgress(el.pgSeconds, s, 60);
             playTick();
             updateFooter(d, h, m);
             if (dist <= 10000) {
@@ -411,19 +410,20 @@
           if (prev.m !== m) {
             prev.m = m;
             setNumber(el.minutes, m);
-            el.pgMinutes.style.width = pct(m, 60);
+            setProgress(el.pgMinutes, m, 60);
           }
           if (prev.h !== h) {
             prev.h = h;
             setNumber(el.hours, h);
-            el.pgHours.style.width = pct(h, 24);
+            setProgress(el.pgHours, h, 24);
           }
           if (prev.d !== d) {
             prev.d = d;
             setNumber(el.days, d);
             const isLeap = (state.targetYear % 4 === 0 && state.targetYear % 100 !== 0)
                         || state.targetYear % 400 === 0;
-            el.pgDays.style.width = pct(d, isLeap ? 366 : 365);
+            const maxDays = isLeap ? 366 : 365;
+            setProgress(el.pgDays, d, maxDays);
           }
         }
       } catch (e) {
@@ -432,6 +432,25 @@
     }
 
     scheduleNextTick();
+  }
+
+  /** 
+   * Updates progress bar width with anti-rewind logic
+   * (snaps to 0 instead of animating backwards when looping)
+   */
+  function setProgress(elProgress, current, max) {
+    const p = Math.round(((max - current) / max) * 1000) / 10;
+    const currentW = parseFloat(elProgress.style.width) || 0;
+    
+    // If it's wrapping around (e.g. from ~100% back to ~0%), disable transition
+    if (currentW > 90 && p < 10) {
+      elProgress.style.transition = 'none';
+      elProgress.style.width = p + '%';
+      void elProgress.offsetHeight; // force reflow
+      elProgress.style.transition = '';
+    } else {
+      elProgress.style.width = p + '%';
+    }
   }
 
   /** Animate the number element when its value changes */
@@ -506,20 +525,32 @@
     el.yearEl.classList.add('flip');
   });
 
-  // Glare mouse tracker — only binds on hover-capable devices
+  // 3D Tilt + Glare mouse tracker — only binds on hover-capable devices
   if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
     document.querySelectorAll('.countdown-card').forEach(card => {
       const glare = card.querySelector('.glare');
       if (!glare) return;
+      
       card.addEventListener('mousemove', (e) => {
         const r  = card.getBoundingClientRect();
-        const px = ((e.clientX - r.left) / r.width)  * 100;
-        const py = ((e.clientY - r.top)  / r.height) * 100;
-        // Use CSS custom property — no layout, single style write per frame
+        const x = e.clientX - r.left;
+        const y = e.clientY - r.top;
+        const px = (x / r.width)  * 100;
+        const py = (y / r.height) * 100;
+        
+        // Advanced Tilt (max 6 degrees)
+        const tiltX = (y / r.height - 0.5) * -12;
+        const tiltY = (x / r.width - 0.5) * 12;
+
+        card.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) scale(1.02) translateY(-5px)`;
+        glare.style.opacity = '1';
         glare.style.background =
-          `radial-gradient(ellipse 70% 50% at ${px}% ${py}%, rgba(255 255 255 / 0.22), transparent 70%)`;
+          `radial-gradient(circle at ${px}% ${py}%, rgba(255 255 255 / 0.25), transparent 80%)`;
       });
+      
       card.addEventListener('mouseleave', () => {
+        card.style.transform = '';
+        glare.style.opacity = '';
         glare.style.background = '';
       });
     });
